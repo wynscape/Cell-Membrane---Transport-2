@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cell Membrane: Transport Interactive | Biology@RI</title>
+    <style>
+        /* WYNSCAPE DESIGN SYSTEM - PURE MINIMALISM */
+        :root {
+            --bg: #FFFFFF;
+            --text-main: #1f2937;
+            --text-light: #9ca3af;
+            --accent: #3b82f6;
+            --lipid-head: #6366f1; /* Indigo-500 */
+            --lipid-tail: #cbd5e1; /* Slate-300 */
+            --cyto: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* HEADER */
+        header {
+            padding: 1rem 1.5rem;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        /* CONTROLS (Top Right) */
+        .controls {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            z-index: 10;
+        }
+
+        select {
+            appearance: none;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            padding: 8px 32px 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+        }
+
+        select:hover { border-color: #cbd5e1; }
+
+        /* CANVAS */
+        #container {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        
+        #container:active { cursor: grabbing; }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* FOOTER */
+        footer {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+        /* INSTRUCTIONS TOAST */
+        .toast {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #64748b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        @media print { body { display: none; } }
+    </style>
+</head>
+<body>
+
+<header>Biology@RI</header>
+
+<div class="controls">
+    <select id="_mSel">
+        <option value="0">Endocytosis (General)</option>
+        <option value="1">Phagocytosis</option>
+        <option value="2">Pinocytosis</option>
+        <option value="3">Exocytosis</option>
+    </select>
+</div>
+
+<div id="container">
+    <canvas id="_c"></canvas>
+    <div class="toast" id="_tst">Drag the molecule to the membrane</div>
+</div>
+
+<footer>&copy; Wynscape Education | All rights reserved</footer>
+
+<script>
+/**
+ * SECURITY & LOGIC LAYER
+ * Obfuscated to prevent reverse engineering.
+ */
+(function(){
+    // 1. SECURITY: Disable Context Menu & DevTools
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.onkeydown = function(e) {
+        if(e.keyCode == 123) return false; // F12
+        if(e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) return false; // I, J, C
+        if(e.ctrlKey && e.keyCode == 85) return false; // U
+    };
+
+    // 2. INITIALIZATION
+    const _cvs = document.getElementById('_c');
+    const _ctx = _cvs.getContext('2d');
+    const _sel = document.getElementById('_mSel');
+    const _tst = document.getElementById('_tst');
+
+    // Config: Scaled down lipids, massive gap
+    let _w, _h, _t = 0;
+    let _lipids = [];
+    let _mode = 0; // 0:Endo, 1:Phago, 2:Pino, 3:Exo
+    
+    // Molecule State
+    const _mol = { x: 0, y: 0, r: 15, dragging: false, active: false, opacity: 1 };
+    // Animation constants
+    const _L_SIZE = 6; // Reduced size (approx 50%)
+    const _L_GAP = 60; // 10x vertical gap
+    const _K_WAVE = 0.03; // Speed
+    
+    function _rsz() {
+        _w = _cvs.width = window.innerWidth;
+        _h = _cvs.height = window.innerHeight;
+        _initLipids();
+        _resetMol();
+    }
+
+    function _initLipids() {
+        _lipids = [];
+        // Dense packing horizontally
+        const count = Math.ceil(_w / (_L_SIZE * 2.5)) + 10;
+        for(let i = -5; i < count; i++) {
+            _lipids.push({ x: i * (_L_SIZE * 2.5), ox: i * (_L_SIZE * 2.5) });
+        }
+    }
+
+    function _resetMol() {
+        _mol.dragging = false;
+        _mol.active = false;
+        _mol.opacity = 1;
+        _mol.r = _mode === 2 ? 8 : 15; // Smaller for Pino
+        
+        // Start position based on mode
+        if (_mode === 3) { // Exocytosis starts at bottom
+            _mol.x = _w / 2;
+            _mol.y = _h * 0.85;
+            _tst.innerText = "Drag vesicle UP to the membrane";
+        } else { // Endo starts at top
+            _mol.x = _w / 2;
+            _mol.y = _h * 0.15;
+            _tst.innerText = "Drag molecule DOWN to the membrane";
+        }
+    }
+
+    // 3. INPUT HANDLERS
+    function _getXY(e) {
+        const b = _cvs.getBoundingClientRect();
+        const t = e.touches ? e.touches[0] : e;
+        return { x: t.clientX - b.left, y: t.clientY - b.top };
+    }
+
+    function _down(e) {
+        const p = _getXY(e);
+        const d = Math.hypot(p.x - _mol.x, p.y - _mol.y);
+        if (d < _mol.r * 3) { _mol.dragging = true; _tst.style.opacity = 0; }
+    }
+
+    function _move(e) {
+        if (!_mol.dragging) return;
+        e.preventDefault();
+        const p = _getXY(e);
+        _mol.x = p.x;
+        _mol.y = p.y;
+    }
+
+    function _up() {
+        if (!_mol.dragging) return;
+        _mol.dragging = false;
+        
+        const memY = _h / 2;
+        let success = false;
+
+        // Transport Logic
+        if (_mode === 3) { // Exo
+            if (_mol.y < memY + 50) { success = true; _mol.active = true; }
+        } else { // Endo/Phago/Pino
+            if (_mol.y > memY - 50) { success = true; _mol.active = true; }
+        }
+
+        if (!success) {
+            // Snap back
+            _snap();
+        }
+    }
+
+    function _snap() {
+        const destY = (_mode === 3) ? _h * 0.85 : _h * 0.15;
+        const anim = () => {
+            if (_mol.dragging || _mol.active) return;
+            _mol.x += (_w/2 - _mol.x) * 0.15;
+            _mol.y += (destY - _mol.y) * 0.15;
+            if (Math.abs(_mol.y - destY) > 1) requestAnimationFrame(anim);
+        };
+        anim();
+    }
+
+    _cvs.addEventListener('mousedown', _down);
+    window.addEventListener('mousemove', _move);
+    window.addEventListener('mouseup', _up);
+    _cvs.addEventListener('touchstart', _down, {passive:false});
+    window.addEventListener('touchmove', _move, {passive:false});
+    window.addEventListener('touchend', _up);
+    
+    _sel.addEventListener('change', (e) => { _mode = parseInt(e.target.value); _resetMol(); });
+
+    // 4. DRAWING & PHYSICS LOOP
+    function _drL(ctx, x, y, ang, isTop) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        
+        // Colors
+        ctx.strokeStyle = '#cbd5e1'; // Tail color
+        ctx.fillStyle = '#6366f1'; // Head color
+        
+        // Draw Tails
+        ctx.beginPath();
+        const tLen = _L_SIZE * 3.5;
+        const gap = 3;
+        // Tail 1
+        ctx.moveTo(-2, (isTop ? 1 : -1) * _L_SIZE);
+        ctx.lineTo(-2, (isTop ? 1 : -1) * tLen);
+        // Tail 2
+        ctx.moveTo(2, (isTop ? 1 : -1) * _L_SIZE);
+        ctx.lineTo(2, (isTop ? 1 : -1) * tLen);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Draw Head
+        ctx.beginPath();
+        ctx.arc(0, 0, _L_SIZE, 0, Math.PI*2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    function _loop() {
+        _t += 0.05;
+        _ctx.clearRect(0, 0, _w, _h);
+        
+        // Watermark
+        _ctx.save();
+        _ctx.translate(_w/2, _h/2);
+        _ctx.rotate(-Math.PI/6);
+        _ctx.font = "700 4vw sans-serif";
+        _ctx.fillStyle = "rgba(0,0,0,0.03)";
+        _ctx.textAlign = "center";
+        _ctx.fillText("WYNSCAPE EDUCATION", 0, 0);
+        _ctx.restore();
+
+        // Calculate Membrane Physics
+        const memY = _h / 2;
+        let targetY = _mol.y;
+        
+        // Exo animation logic
+        if(_mode === 3 && _mol.active) {
+            _mol.y -= 2; // Drift up
+            _mol.opacity -= 0.02;
+            if(_mol.opacity <= 0) _resetMol();
+        }
+        // Endo animation logic
+        else if (_mol.active) {
+            _mol.y += 2; // Drift down
+            if (_mol.y > _h + 50) _resetMol();
+        }
+
+        // Draw Lipids
+        _ctx.beginPath();
+        for(let l of _lipids) {
+            // Kallang Wave (Sine)
+            let wave = Math.sin(l.ox * 0.02 + _t) * 4;
+            
+            // Interaction Deformation
+            let def = 0;
+            let dx = l.ox - _mol.x;
+            // Gaussian influence
+            let influence = Math.exp(-(dx*dx) / (2 * 2500)); // Width of interaction
+            
+            if (_mode === 1) { // Phagocytosis (Reach OUT)
+                // Inverted Gaussian for pseudopodia
+                if(_mol.y > _h*0.2) def = -influence * 80 * Math.max(0, (_mol.y - _h*0.2)/100);
+            } else if (_mode === 2) { // Pinocytosis (Narrow In)
+                let narrowInf = Math.exp(-(dx*dx) / (2 * 400));
+                def = narrowInf * 60; 
+                if(_mol.y < _h*0.8) def *= Math.max(0, (_mol.y - _h*0.2)/100);
+            } else if (_mode === 3) { // Exocytosis
+                // Bulge outward slightly as it fuses
+                if(_mol.y < _h*0.7) def = -influence * 30 * _mol.opacity;
+            } else { // General Endo
+                if(_mol.y > _h*0.2) def = influence * 60 * Math.max(0, (_mol.y - _h*0.2)/100);
+            }
+
+            // If vesicle passed through, settle membrane
+            if(_mol.active && _mode !== 3) {
+                 // Close the hole behind it
+                 let factor = Math.min(1, (_mol.y - memY) / 100);
+                 def *= (1 - factor); 
+            }
+
+            let cy = memY + wave + def;
+            
+            // Draw Top Layer
+            _drL(_ctx, l.ox, cy - _L_GAP/2, 0, true);
+            // Draw Bottom Layer
+            _drL(_ctx, l.ox, cy + _L_GAP/2, 0, false);
+        }
+
+        // Draw Molecule
+        if(_mol.opacity > 0) {
+            _ctx.globalAlpha = _mol.opacity;
+            _ctx.fillStyle = (_mode === 3) ? '#f59e0b' : '#10b981'; // Amber for vesicles, Emerald for food
+            
+            if(_mode === 3 && _mol.active) {
+                // Particles releasing
+                 _ctx.fillStyle = '#f59e0b';
+                 for(let i=0; i<5; i++){
+                    _ctx.beginPath();
+                    _ctx.arc(_mol.x + (i-2)*10, _mol.y - 20 - i*5, 4, 0, Math.PI*2);
+                    _ctx.fill();
+                 }
+            } else {
+                _ctx.beginPath();
+                _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
+                _ctx.fill();
+                // Shadow
+                _ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                _ctx.beginPath();
+                _ctx.arc(_mol.x-2, _mol.y+2, _mol.r, 0, Math.PI*2);
+                _ctx.fill();
+            }
+            _ctx.globalAlpha = 1;
+        }
+
+        requestAnimationFrame(_loop);
+    }
+
+    // Start
+    _rsz();
+    window.addEventListener('resize', _rsz);
+    _loop();
+
+})();
+</script>
+</body>
+</html>
