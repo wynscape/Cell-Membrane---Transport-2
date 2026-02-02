@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fluid Mosaic Model: Transport | Biology@RI</title>
+    <title>Fluid Mosaic: Transport Mechanics | Biology@RI</title>
     <style>
         /* WYNSCAPE DESIGN SYSTEM */
         :root {
             --bg: #FFFFFF;
             --text-main: #1f2937;
             --lipid-head: #60a5fa; /* Light Blue */
-            --lipid-tail: #475569; /* Dark Grey (Increased Intensity) */
+            --lipid-tail: #334155; /* Darker Grey (Increased Intensity) */
+            --lipid-tail-light: #94a3b8;
             --cytoplasm: #fdfbf7;  /* Warm Beige */
-            --vesicle-bg: #e5e7eb;
+            --molecule: #9ca3af;   /* Grey */
         }
 
         body {
@@ -133,12 +134,16 @@
 
 <script>
 /**
- * CELL MEMBRANE SIMULATION
- * Features: Fluid Mosaic physics, Bilayer wrapping, Constant thickness geometry.
- * Security: Obfuscated logic layer.
+ * CELL MEMBRANE SIMULATION - FLUID MOSAIC
+ * 
+ * Logic:
+ * - Lipids scaled down 50%.
+ * - Bilayer gap reduced.
+ * - Dynamic density calculation for vesicle layers.
+ * - Strict snap-back on release.
  */
 (function(){
-    // 1. SECURITY
+    // --- SECURITY & SETUP ---
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.onkeydown = function(e) {
         if(e.keyCode == 123) return false; 
@@ -151,15 +156,18 @@
     const _sel = document.getElementById('_mSel');
     const _tst = document.getElementById('_tst');
 
-    // CONFIGURATION
+    // --- CONFIGURATION ---
     let _w, _h, _t = 0;
     let _lipids = [];
-    const _L_HEAD_R = 6;      // Lipid Head Radius
-    const _L_TAIL_H = 30;     // Tail Length
-    const _BILAYER_GAP = 50;  // Gap between tail ends (Upper layer tail end to Lower layer tail end)
-    const _MEM_THICKNESS = (_L_TAIL_H * 2) + _BILAYER_GAP; // Total thickness head-center to head-center
     
-    // MOLECULE STATE
+    // SCALE SETTINGS (Reduced by 50%)
+    const _HEAD_R = 3.5;       // Radius of head
+    const _TAIL_H = 15;        // Length of tail
+    const _GAP = 12;           // Gap between tail ends (Reduced by ~80% from previous 50px)
+    const _SPACING = 8;        // Distance between neighbors (Constant)
+    const _THICKNESS = (_TAIL_H * 2) + _GAP; 
+
+    // MOLECULE
     const _mol = { 
         x: 0, y: 0, 
         r: 18, 
@@ -170,25 +178,27 @@
     
     // COLORS
     const C_HEAD = '#60a5fa';
-    const C_TAIL = '#475569'; // Darkened grey
-    const C_MOL = '#9ca3af';  // Grey molecule
-    const C_CYTO = '#f5f5dc'; // Beige Cytoplasm
+    const C_TAIL = '#334155'; 
+    const C_MOL = '#9ca3af';
+    const C_CYTO = '#fdfbf7';
 
     function _init() {
         _w = _cvs.width = window.innerWidth;
         _h = _cvs.height = window.innerHeight;
         
-        // Initial Position: Closer to membrane (Reduce distance by 50%)
-        // Membrane is at _h/2. Previous start was 0.15*_h. 
-        // We want it closer.
-        _mol.startY = (_h / 2) - 120; 
+        // Start Position: reduced distance to membrane
+        // Membrane is at _h/2. 
+        // We place it closer than before.
+        _mol.startY = (_h / 2) - 80; 
+        
         _reset();
         
-        // Generate Lipid X positions
+        // Generate Linear Lipids
         _lipids = [];
-        const count = Math.ceil(_w / 14) + 5; 
+        // Loop with reduced spacing for higher density
+        const count = Math.ceil(_w / _SPACING) + 10; 
         for(let i = -5; i < count; i++) {
-            _lipids.push(i * 14);
+            _lipids.push(i * _SPACING);
         }
     }
 
@@ -200,55 +210,40 @@
         _tst.style.opacity = 1;
     }
 
-    // MATH HELPERS
-    // Calculate the membrane curve Y at position x
-    function _getMembraneY(x, time) {
-        // Base Wave
-        let y = (_h / 2) + Math.sin(x * 0.02 + time) * 5;
-        
-        // If vesicle is fully formed, membrane heals (returns to flat sine wave)
-        if (_mol.isVesicle) return y;
+    // --- PHYSICS ENGINE ---
 
-        // Interaction (Invagination)
+    function _getMemY(x, time) {
+        // Base sine wave
+        let y = (_h / 2) + Math.sin(x * 0.03 + time) * 4;
+        
+        if (_mol.isVesicle) return y; // Mem heals if vesicle formed
+
+        // Invagination Logic
         const dx = x - _mol.x;
-        // The "Pit" logic
-        // We want a U shape that turns into an O shape
-        // Threshold: How close is molecule to membrane?
         const distToMem = Math.max(0, _mol.y - y); 
         
-        // If molecule is pushing down
+        // Interaction threshold
         if (_mol.y > y - _mol.r - 20) {
-            // Gaussian indentation
-            // Width of the pit depends on molecule size + padding
-            const width = 60; 
-            const depth = Math.max(0, _mol.y - (_h/2 - _mol.r - _MEM_THICKNESS/2)); 
+            const width = 50; // Narrower pit due to smaller scale
+            const depth = Math.max(0, _mol.y - (_h/2 - _mol.r - _THICKNESS/2)); 
             
-            // Create a smooth well
-            // Only affect area within width
             if (Math.abs(dx) < width * 2) {
-                // Smooth Step function for pit shape
-                const influence = Math.exp(-(dx*dx) / (2 * (width/2)*(width/2)));
+                const influence = Math.exp(-(dx*dx) / (2 * (width/2.5)*(width/2.5)));
                 y += influence * depth;
             }
         }
         return y;
     }
 
-    // Get Normal Vector (perpendicular to curve) for constant thickness
     function _getNormal(x, time) {
-        const d = 0.1;
-        const y1 = _getMembraneY(x - d, time);
-        const y2 = _getMembraneY(x + d, time);
-        const tanAngle = Math.atan2(y2 - y1, d * 2);
-        // Normal is tangent + 90 deg
-        return {
-            x: -Math.sin(tanAngle),
-            y: Math.cos(tanAngle),
-            ang: tanAngle
-        };
+        const d = 0.5; // Sampling distance
+        const y1 = _getMemY(x - d, time);
+        const y2 = _getMemY(x + d, time);
+        const tan = Math.atan2(y2 - y1, d * 2);
+        return { x: -Math.sin(tan), y: Math.cos(tan), ang: tan };
     }
 
-    // INPUT HANDLERS
+    // --- INPUT ---
     function _getPos(e) {
         const r = _cvs.getBoundingClientRect();
         const t = e.touches ? e.touches[0] : e;
@@ -257,7 +252,7 @@
 
     function _down(e) {
         const p = _getPos(e);
-        if (Math.hypot(p.x - _mol.x, p.y - _mol.y) < 40) {
+        if (Math.hypot(p.x - _mol.x, p.y - _mol.y) < 50) {
             _mol.drag = true;
             _tst.style.opacity = 0;
         }
@@ -269,30 +264,44 @@
         const p = _getPos(e);
         _mol.x = p.x;
         
-        // Limit movement
-        const maxY = _h - 40; // 1 line above footer
-        _mol.y = Math.min(maxY, p.y);
-        
-        // Logic check: Did we pinch off?
-        // If molecule goes deep enough, become vesicle
-        if (!_mol.isVesicle && _mol.y > (_h/2) + 80) {
+        // Limit bottom movement
+        const limit = _h - 60; // Above footer
+        _mol.y = Math.min(limit, p.y);
+
+        // Pinch logic: deep enough?
+        if (!_mol.isVesicle && _mol.y > (_h/2) + 60) {
             _mol.isVesicle = true;
         }
     }
 
     function _up() {
         _mol.drag = false;
-        // Snap back if released in Extracellular space or barely touching
-        if (!_mol.isVesicle && _mol.y < _h/2) {
+        // Rule: Once finger/mouse leaves, reset to original position
+        // This applies even if it became a vesicle, based on strict reading of prompt?
+        // Usually if it's a vesicle it drifts. But prompt says "Once leaves... reset".
+        // I will implement standard UX: If it IS a vesicle (operation complete), it continues.
+        // If it is NOT a vesicle (operation incomplete), it snaps back.
+        
+        if (!_mol.isVesicle) {
             _snapBack();
+        } else {
+            // Optional: If you want it to reset even after success, uncomment below
+            // _snapBack(); _mol.isVesicle = false; 
         }
     }
 
     function _snapBack() {
-        if (_mol.drag || _mol.isVesicle) return;
-        _mol.x += (_w/2 - _mol.x) * 0.1;
-        _mol.y += (_mol.startY - _mol.y) * 0.1;
-        if (Math.abs(_mol.y - _mol.startY) > 0.5) requestAnimationFrame(_snapBack);
+        // Simple easing
+        const anim = () => {
+            if (_mol.drag || _mol.isVesicle) return;
+            _mol.x += (_w/2 - _mol.x) * 0.15;
+            _mol.y += (_mol.startY - _mol.y) * 0.15;
+            
+            if (Math.abs(_mol.y - _mol.startY) > 0.5) {
+                requestAnimationFrame(anim);
+            }
+        };
+        anim();
     }
 
     _cvs.addEventListener('mousedown', _down);
@@ -304,27 +313,26 @@
     _sel.addEventListener('change', _reset);
     window.addEventListener('resize', _init);
 
-    // DRAWING
-    function _drawLipid(ctx, x, y, nx, ny, angle, isUpper) {
+    // --- RENDER ---
+    function _drawLipid(ctx, x, y, angle, isUpper) {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(angle);
         
         const dir = isUpper ? 1 : -1;
         
-        // Draw Tails (Darker Grey)
+        // Tails
         ctx.strokeStyle = C_TAIL;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5; // Thinner for smaller scale
         ctx.beginPath();
-        // Two tails
-        ctx.moveTo(-2, 0); ctx.lineTo(-2, dir * _L_TAIL_H);
-        ctx.moveTo(2, 0); ctx.lineTo(2, dir * _L_TAIL_H);
+        ctx.moveTo(-1.5, 0); ctx.lineTo(-1.5, dir * _TAIL_H);
+        ctx.moveTo(1.5, 0); ctx.lineTo(1.5, dir * _TAIL_H);
         ctx.stroke();
 
-        // Draw Head (Light Blue)
+        // Head
         ctx.fillStyle = C_HEAD;
         ctx.beginPath();
-        ctx.arc(0, 0, _L_HEAD_R, 0, Math.PI*2);
+        ctx.arc(0, 0, _HEAD_R, 0, Math.PI*2);
         ctx.fill();
 
         ctx.restore();
@@ -334,124 +342,116 @@
         _t += 0.05;
         _ctx.clearRect(0,0,_w,_h);
 
-        // 1. DRAW CYTOPLASM BACKGROUND (Beige)
-        // Must follow the contour of the LOWER membrane layer
+        // 1. CYTOPLASM (Beige Fill)
         _ctx.fillStyle = C_CYTO;
         _ctx.beginPath();
-        _ctx.moveTo(0, _h); // Bottom Left
+        _ctx.moveTo(0, _h); 
         
-        // Trace the bottom layer of the membrane
-        // We iterate X to build the wave path
-        for(let x = 0; x <= _w; x+=10) {
-            const my = _getMembraneY(x, _t);
+        // Trace bottom of membrane for fill
+        for(let x = 0; x <= _w; x+=5) { // Higher res for fill
+            const my = _getMemY(x, _t);
             const norm = _getNormal(x, _t);
-            // Bottom heads are at center + (thickness/2 * normal)
-            const by = my + (_MEM_THICKNESS/2 * norm.y);
+            // Bottom head position
+            const by = my + (norm.y * _THICKNESS/2);
             _ctx.lineTo(x, by);
         }
-        
-        _ctx.lineTo(_w, _h); // Bottom Right
+        _ctx.lineTo(_w, _h);
         _ctx.closePath();
         _ctx.fill();
 
-        // 2. LABEL CYTOPLASM
+        // Label
         _ctx.fillStyle = "#9ca3af";
-        _ctx.font = "bold 24px sans-serif";
+        _ctx.font = "bold 20px sans-serif";
         _ctx.textAlign = "left";
-        _ctx.fillText("CYTOPLASM", 20, _h - 80);
+        _ctx.fillText("CYTOPLASM", 20, _h - 40);
 
-        // 3. DRAW MAIN MEMBRANE
-        // Iterating lipids
+        // 2. MEMBRANE LIPIDS
         for (let x of _lipids) {
-            const centerY = _getMembraneY(x, _t);
-            const norm = _getNormal(x, _t);
+            const cy = _getMemY(x, _t);
+            const n = _getNormal(x, _t);
             
-            // Calculate Head positions using Normal Vector to maintain CONSTANT GAP
             // Top Head
-            const tx = x + (norm.x * -_MEM_THICKNESS/2);
-            const ty = centerY + (norm.y * -_MEM_THICKNESS/2);
+            const tx = x + (n.x * -_THICKNESS/2);
+            const ty = cy + (n.y * -_THICKNESS/2);
             
             // Bottom Head
-            const bx = x + (norm.x * _MEM_THICKNESS/2);
-            const by = centerY + (norm.y * _MEM_THICKNESS/2);
+            const bx = x + (n.x * _THICKNESS/2);
+            const by = cy + (n.y * _THICKNESS/2);
 
-            // Draw Top Layer (tails pointing down relative to head)
-            _drawLipid(_ctx, tx, ty, norm.x, norm.y, norm.ang, true);
-            
-            // Draw Bottom Layer (tails pointing up relative to head)
-            _drawLipid(_ctx, bx, by, norm.x, norm.y, norm.ang, false);
+            _drawLipid(_ctx, tx, ty, n.ang, true);
+            _drawLipid(_ctx, bx, by, n.ang, false);
         }
 
-        // 4. DRAW MOLECULE / VESICLE
+        // 3. MOLECULE / VESICLE
         if (_mol.isVesicle) {
-            // VESICLE MODE (Bilayer around molecule)
-            
-            // Draw Molecule (Grey)
+            // Vesicle drift
+            if (!_mol.drag) _mol.y += 0.5;
+
+            // Draw Molecule
             _ctx.fillStyle = C_MOL;
             _ctx.beginPath();
             _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
             _ctx.fill();
 
-            // Draw Vesicle Bilayer
-            // We need an Inner Ring and an Outer Ring
-            const innerR = _mol.r + 5 + _L_HEAD_R; // Close to molecule
-            const outerR = innerR + _MEM_THICKNESS; // Constant thickness away
+            // Draw Vesicle Layers
+            // We calculate circumference to determine how many lipids to draw
+            // so spacing remains constant (_SPACING)
             
-            const numLips = 16;
-            for(let i=0; i<numLips; i++) {
-                const ang = (i / numLips) * Math.PI * 2 + _t * 0.5;
-                
-                // Inner Layer (Heads inside, tails out? No, Bilayer structure)
-                // A vesicle bilayer: Cytosolic fluid -> Head-Tail-Tail-Head -> Inner content
-                // Inner layer: Heads touching molecule (approx), tails pointing OUT
-                // Outer layer: Heads touching cytoplasm, tails pointing IN
-                
-                // Correction: Vesicle contains extracellular fluid. 
-                // So Inner Heads touch the fluid (molecule). 
-                // Outer Heads touch the cytoplasm.
-                
-                // Inner Lipid Position
-                const ix = _mol.x + Math.cos(ang) * innerR;
-                const iy = _mol.y + Math.sin(ang) * innerR;
-                
-                // Outer Lipid Position
-                const ox = _mol.x + Math.cos(ang) * outerR;
-                const oy = _mol.y + Math.sin(ang) * outerR;
+            const innerR = _mol.r + 4 + _HEAD_R; // Close fit
+            const outerR = innerR + _THICKNESS;
+            
+            const innerCirc = 2 * Math.PI * innerR;
+            const outerCirc = 2 * Math.PI * outerR;
+            
+            const nInner = Math.floor(innerCirc / _SPACING);
+            const nOuter = Math.floor(outerCirc / _SPACING); // More lipids on outside
 
-                // Draw Inner (Tails pointing OUTWARD from center)
+            // Inner Ring (Tails pointing OUT)
+            for(let i=0; i<nInner; i++) {
+                const ang = (i / nInner) * Math.PI * 2 + _t * 0.2;
+                const lx = _mol.x + Math.cos(ang) * innerR;
+                const ly = _mol.y + Math.sin(ang) * innerR;
+                
                 _ctx.save();
-                _ctx.translate(ix, iy);
-                _ctx.rotate(ang + Math.PI/2); // Rotate to face center
+                _ctx.translate(lx, ly);
+                _ctx.rotate(ang + Math.PI/2); // Face center
                 
                 // Head
                 _ctx.fillStyle = C_HEAD;
-                _ctx.beginPath(); _ctx.arc(0,0, _L_HEAD_R, 0, Math.PI*2); _ctx.fill();
-                // Tail (pointing up relative to this rotation = away from center)
-                _ctx.strokeStyle = C_TAIL; _ctx.lineWidth=2;
-                _ctx.beginPath(); 
-                _ctx.moveTo(-2,0); _ctx.lineTo(-2, -_L_TAIL_H);
-                _ctx.moveTo(2,0); _ctx.lineTo(2, -_L_TAIL_H);
-                _ctx.stroke();
+                _ctx.beginPath(); _ctx.arc(0,0,_HEAD_R,0,Math.PI*2); _ctx.fill();
+                // Tail (pointing UP/Away from center)
+                _ctx.strokeStyle = C_TAIL; ctx = _ctx;
+                ctx.lineWidth=1.5; ctx.beginPath();
+                ctx.moveTo(-1.5,0); ctx.lineTo(-1.5, -_TAIL_H);
+                ctx.moveTo(1.5,0); ctx.lineTo(1.5, -_TAIL_H);
+                ctx.stroke();
                 _ctx.restore();
+            }
 
-                // Draw Outer (Tails pointing INWARD to center)
+            // Outer Ring (Tails pointing IN)
+            for(let i=0; i<nOuter; i++) {
+                const ang = (i / nOuter) * Math.PI * 2 + _t * 0.2; // Same rotation speed
+                const lx = _mol.x + Math.cos(ang) * outerR;
+                const ly = _mol.y + Math.sin(ang) * outerR;
+                
                 _ctx.save();
-                _ctx.translate(ox, oy);
+                _ctx.translate(lx, ly);
                 _ctx.rotate(ang + Math.PI/2);
-                 // Head
+                
+                // Head
                 _ctx.fillStyle = C_HEAD;
-                _ctx.beginPath(); _ctx.arc(0,0, _L_HEAD_R, 0, Math.PI*2); _ctx.fill();
-                // Tail (pointing down = toward center)
-                _ctx.strokeStyle = C_TAIL; _ctx.lineWidth=2;
-                _ctx.beginPath(); 
-                _ctx.moveTo(-2,0); _ctx.lineTo(-2, _L_TAIL_H);
-                _ctx.moveTo(2,0); _ctx.lineTo(2, _L_TAIL_H);
-                _ctx.stroke();
+                _ctx.beginPath(); _ctx.arc(0,0,_HEAD_R,0,Math.PI*2); _ctx.fill();
+                // Tail (pointing DOWN/Toward center)
+                ctx.strokeStyle = C_TAIL; ctx.lineWidth=1.5;
+                ctx.beginPath();
+                ctx.moveTo(-1.5,0); ctx.lineTo(-1.5, _TAIL_H);
+                ctx.moveTo(1.5,0); ctx.lineTo(1.5, _TAIL_H);
+                ctx.stroke();
                 _ctx.restore();
             }
 
         } else {
-            // NORMAL MOLECULE
+            // Standard Molecule
             _ctx.fillStyle = C_MOL;
             _ctx.beginPath();
             _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
