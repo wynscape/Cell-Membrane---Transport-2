@@ -9,10 +9,10 @@
         :root {
             --bg: #FFFFFF;
             --text-black: #000000;
-            --text-meta: rgba(0, 0, 0, 0.2);
+            --text-meta: rgba(0, 0, 0, 0.4);
             --lipid-head: #60a5fa; 
             --lipid-tail: #334155; 
-            --cytoplasm: #e5e4dc;  /* Darkened intensity (Greige/Dark Beige) */
+            --cytoplasm: #fdfbf7;  /* Warm Beige */
             --molecule: #9ca3af;
         }
 
@@ -29,9 +29,9 @@
             -webkit-user-select: none;
         }
 
-        /* HEADER - CENTRALIZED */
+        /* HEADER - LEFT ALIGNED */
         header {
-            padding: 0.8rem 0;
+            padding: 1rem 1.5rem; /* Left margin applied here */
             width: 100%;
             position: absolute;
             top: 0;
@@ -40,26 +40,40 @@
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            align-items: center; /* Center horizontally */
-            text-align: center;
+            align-items: flex-start; /* Push to left */
+            text-align: left;
         }
 
-        .title-line-1 { font-weight: 700; font-size: 1.2rem; color: var(--text-black); line-height: 1.1; }
-        .title-line-2 { font-weight: 600; font-size: 1rem; color: var(--text-black); line-height: 1.1; }
-        .title-line-3 { font-weight: 600; font-size: 0.6rem; color: var(--text-meta); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .title-line-1 { 
+            font-weight: 700; 
+            font-size: 1.5rem; /* Increased by 25% (was 1.2rem) */
+            color: var(--text-black); 
+            line-height: 1.1; 
+        }
+        .title-line-2 { 
+            font-weight: 700; /* Matching weight */
+            font-size: 1.5rem; /* Matching size */
+            color: var(--text-black); 
+            line-height: 1.1; 
+        }
+        .title-line-3 { 
+            font-weight: 600; 
+            font-size: 0.75rem; 
+            color: var(--text-meta); 
+            margin-top: 6px; 
+            letter-spacing: 0.05em; 
+        }
 
-        /* CONTROLS - CENTRALIZED & CLOSER */
+        /* CONTROLS - LEFT ALIGNED */
         .controls {
             position: absolute;
-            top: 5rem; /* Moved up relative to previous */
-            left: 50%;
-            transform: translateX(-50%);
+            top: 7rem; /* Adjusted for larger title */
+            left: 1.5rem; /* Pushed to left margin */
             z-index: 30;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start; /* Left align */
             gap: 4px;
-            width: 100%;
         }
 
         .controls label { font-size: 0.7rem; color: #64748b; font-weight: 600; margin-bottom: 2px; }
@@ -71,7 +85,7 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e");
             background-repeat: no-repeat; background-position: right 6px center; background-size: 12px;
-            text-align: center;
+            text-align: left;
         }
 
         /* CANVAS */
@@ -84,12 +98,20 @@
 
         /* FOOTER */
         footer {
-            position: absolute; bottom: 8px; width: 100%; text-align: center;
-            font-size: 0.7rem; color: #94a3b8; pointer-events: none; z-index: 30;
+            position: absolute; 
+            bottom: 0; 
+            width: 100%; 
+            padding: 10px 0;
+            text-align: center;
+            font-size: 0.7rem; 
+            color: #94a3b8; 
+            pointer-events: none; 
+            z-index: 30;
+            background-color: #FFFFFF; /* White Background */
         }
 
         .toast {
-            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
             background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0;
             padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; color: #64748b;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
@@ -126,11 +148,10 @@
 <script>
 /**
  * CELL MEMBRANE LOGIC
- * Updates:
- * - Centralized UI.
- * - Reduced Bilayer Spacing (Heads gap < Head Diameter).
- * - Vesicle fully formed at halfway point.
- * - Strict snapback.
+ * - Left-aligned UI with enlarged titles.
+ * - Beige Cytoplasm.
+ * - Centralized Label.
+ * - Strict Snapback & Vesicle Logic maintained.
  */
 (function(){
     // --- SECURITY ---
@@ -151,21 +172,15 @@
     
     // SCALE SETTINGS
     const _HEAD_R = 3.5;       
-    const _HEAD_DIA = 7;
-    const _TAIL_H = 12; // Shortened tails slightly to maintain proportion
-    // Constraint: Gap between upper tails and lower tails must be tight
-    // Space between Upper Head Center and Lower Head Center = Thickness
-    // User wants gap between LAYERS < Blue Circle Diameter.
-    const _GAP = 2; // Very tight gap (tails almost touch)
-    const _THICKNESS = (_TAIL_H * 2) + _GAP; // Total thickness approx 26px
+    const _TAIL_H = 12; 
+    const _GAP = 2; // Tight gap
+    const _THICKNESS = (_TAIL_H * 2) + _GAP; 
     const _SPACING = 8;        
 
     // MEMBRANE POSITION
-    // Move up by 30% closer to dropdown. 
-    // Dropdown is at ~80px. Membrane was at 0.35h. Let's move to 0.25h.
-    const _MEM_Y_FACTOR = 0.25; 
+    const _MEM_Y_FACTOR = 0.28; // Slightly adjusted for new title size
 
-    // MOLECULE (Enlarged)
+    // MOLECULE
     const _mol = { 
         x: 0, y: 0, 
         r: 27, 
@@ -177,7 +192,7 @@
     const C_HEAD = '#60a5fa';
     const C_TAIL = '#334155'; 
     const C_MOL = '#9ca3af';
-    const C_CYTO = '#e5e4dc'; // Darker Beige
+    const C_CYTO = '#fdfbf7'; // Beige
 
     function _init() {
         _w = _cvs.width = window.innerWidth;
@@ -215,12 +230,12 @@
         e.preventDefault();
         const p = _getPos(e);
         _mol.x = p.x;
+        // Limit movement above footer
         const limit = _h - 40; 
         _mol.y = Math.min(limit, p.y);
     }
 
     function _up() {
-        // Strict Reset
         _mol.drag = false;
         _snapBack();
     }
@@ -246,14 +261,13 @@
     _sel.addEventListener('change', _reset);
     window.addEventListener('resize', _init);
 
-    // --- GEOMETRY & RENDERING ---
+    // --- RENDER ---
     function _drawLipid(ctx, x, y, angle, isUpper) {
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(angle);
         const dir = isUpper ? 1 : -1;
         
-        // Tails
         ctx.strokeStyle = C_TAIL;
         ctx.lineWidth = 1.5; 
         ctx.beginPath();
@@ -261,12 +275,10 @@
         ctx.moveTo(1.5, 0); ctx.lineTo(1.5, dir * _TAIL_H);
         ctx.stroke();
 
-        // Head
         ctx.fillStyle = C_HEAD;
         ctx.beginPath();
         ctx.arc(0, 0, _HEAD_R, 0, Math.PI*2);
         ctx.fill();
-
         ctx.restore();
     }
 
@@ -275,19 +287,13 @@
         _ctx.clearRect(0,0,_w,_h);
 
         const memY = _h * _MEM_Y_FACTOR;
-        const footerY = _h - 35;
+        const footerH = 35; // approximate height of footer
+        const footerY = _h - footerH; 
         
-        // --- VESICLE FORMATION LOGIC ---
-        // Requirement: Fully formed at HALFWAY distance.
+        // --- VESICLE LOGIC ---
         const distanceTotal = footerY - memY;
-        const formationPoint = memY + (distanceTotal * 0.5); // Halfway
-        
-        // Current Depth
+        const formationPoint = memY + (distanceTotal * 0.5); 
         const currentY = _mol.y;
-        
-        // Calculate Neck Width based on progress to Halfway point
-        // 0% progress = full width (approx 80)
-        // 100% progress (at halfway) = 0 width (pinched)
         
         let neckWidth = 80;
         let isDetached = false;
@@ -302,23 +308,19 @@
             }
         }
 
-        // --- GENERATE PATHS ---
+        // --- PATH GENERATION ---
         const points = [];
-        const vesiclePoints = []; // For detached vesicle
+        const vesiclePoints = [];
         const step = _SPACING;
 
-        // 1. MAIN MEMBRANE PATH
         for(let x = -20; x <= _w + 20; x += step) {
             let y = memY + Math.sin(x * 0.03 + _t) * 4;
             
             if (!isDetached) {
-                // Invagination Logic (Attached)
                 const dx = x - _mol.x;
                 const pitWidth = neckWidth + (_mol.r * 1.5);
-                
                 if (currentY > memY && Math.abs(dx) < pitWidth) {
                     const depth = currentY - memY;
-                    // Shape function
                     const shape = Math.exp(-Math.pow(dx / (20 + neckWidth/2), 2));
                     y += shape * depth;
                 }
@@ -326,31 +328,24 @@
             points.push({x, y});
         }
 
-        // 2. DETACHED VESICLE PATH (If applicable)
         if (isDetached) {
-            const vR = _mol.r + _THICKNESS/2 + 5; // Radius of vesicle center line
+            const vR = _mol.r + _THICKNESS/2 + 5;
             const circumference = 2 * Math.PI * vR;
             const numV = Math.floor(circumference / _SPACING);
-            
             for(let i=0; i<numV; i++) {
                 const ang = (i/numV) * Math.PI * 2 + _t * 0.1;
                 const vx = _mol.x + Math.cos(ang) * vR;
                 const vy = _mol.y + Math.sin(ang) * vR;
-                // Normal points OUT from center
-                const nx = Math.cos(ang);
-                const ny = Math.sin(ang);
                 vesiclePoints.push({x:vx, y:vy, ang: ang + Math.PI/2});
             }
         }
 
-        // --- DRAWING ---
-
-        // A. CYTOPLASM FILL
+        // --- DRAW CYTOPLASM (Beige) ---
         _ctx.fillStyle = C_CYTO;
         _ctx.beginPath();
         _ctx.moveTo(0, footerY);
         
-        // Trace Main Membrane Bottom
+        // Trace Membrane Bottom
         for(let i=1; i<points.length-1; i++) {
             const p = points[i];
             const prev = points[i-1];
@@ -358,6 +353,7 @@
             const tan = Math.atan2(next.y - prev.y, next.x - prev.x);
             const nx = -Math.sin(tan);
             const ny = Math.cos(tan);
+            // Bottom head Y
             const by = p.y + (ny * _THICKNESS/2);
             if(i===1) _ctx.lineTo(0, by);
             _ctx.lineTo(p.x + (nx*_THICKNESS/2), by);
@@ -366,13 +362,18 @@
         _ctx.closePath();
         _ctx.fill();
 
-        // Label
+        // --- LABEL POSITIONING ---
+        // Halfway between lower layer (approx memY + thickness/2) and FooterY
+        const lowerLayerY = memY + _THICKNESS/2;
+        const labelY = lowerLayerY + (footerY - lowerLayerY) / 2;
+
         _ctx.fillStyle = "rgba(0,0,0,0.4)";
         _ctx.font = "bold 16px sans-serif";
-        _ctx.textAlign = "left";
-        _ctx.fillText("CYTOPLASM", 20, footerY - 80);
+        _ctx.textAlign = "center";
+        // Center horizontally in the Cytoplasm area (canvas center)
+        _ctx.fillText("CYTOPLASM", _w/2, labelY);
 
-        // B. LIPIDS (Main Membrane)
+        // --- DRAW LIPIDS ---
         for(let i=1; i<points.length-1; i++) {
             const p = points[i];
             const prev = points[i-1];
@@ -390,39 +391,20 @@
             _drawLipid(_ctx, bx, by, tan, false);
         }
 
-        // C. LIPIDS (Vesicle - if detached)
         if (isDetached) {
             for(let p of vesiclePoints) {
-                // Inner (was Upper) -> Heads point IN (towards molecule)
-                // We rotated angle +90. Normal points OUT.
-                // To point heads IN: translate -Thickness/2
-                
                 const nx = Math.cos(p.ang - Math.PI/2); 
                 const ny = Math.sin(p.ang - Math.PI/2);
-                
-                // Note: In circle geometry logic above:
-                // ang is angle from center. 
-                // We want Inner Layer (heads touch fluid) and Outer Layer (heads touch cytoplasm)
-                
-                // Inner Layer Position
                 const ix = p.x + (nx * -_THICKNESS/2);
                 const iy = p.y + (ny * -_THICKNESS/2);
-                
-                // Outer Layer Position
                 const ox = p.x + (nx * _THICKNESS/2);
                 const oy = p.y + (ny * _THICKNESS/2);
-                
-                // Draw Inner (Heads point IN towards center)
-                // _drawLipid rotation logic: 0 = straight up.
-                // We need to rotate so tails point OUT.
-                _drawLipid(_ctx, ix, iy, p.ang, false); // false = heads down (relative to rotation)
-                
-                // Draw Outer (Heads point OUT towards cytoplasm)
-                _drawLipid(_ctx, ox, oy, p.ang, true); // true = heads up
+                _drawLipid(_ctx, ix, iy, p.ang, false); 
+                _drawLipid(_ctx, ox, oy, p.ang, true); 
             }
         }
 
-        // D. MOLECULE
+        // --- DRAW MOLECULE ---
         _ctx.fillStyle = C_MOL;
         _ctx.beginPath();
         _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
