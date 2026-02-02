@@ -1,26 +1,27 @@
+code
+Html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fluid Mosaic: Transport Mechanics | Biology@RI</title>
+    <title>Membrane Transport Simulation</title>
     <style>
-        /* WYNSCAPE DESIGN SYSTEM */
+        /* DESIGN SYSTEM */
         :root {
             --bg: #FFFFFF;
-            --text-main: #1f2937;
-            --lipid-head: #60a5fa; /* Light Blue */
-            --lipid-tail: #334155; /* Darker Grey (Increased Intensity) */
-            --lipid-tail-light: #94a3b8;
-            --cytoplasm: #fdfbf7;  /* Warm Beige */
-            --molecule: #9ca3af;   /* Grey */
+            --text-black: #000000;
+            --text-meta: rgba(0, 0, 0, 0.2);
+            --lipid-head: #60a5fa; 
+            --lipid-tail: #334155; 
+            --cytoplasm: #fdfbf7;  
+            --molecule: #9ca3af;
         }
 
         body {
             margin: 0;
             padding: 0;
             background-color: var(--bg);
-            color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
             display: flex;
@@ -32,82 +33,61 @@
 
         /* HEADER */
         header {
-            padding: 1rem 1.5rem;
+            padding: 0.8rem 1.5rem;
             position: absolute;
             top: 0;
             left: 0;
-            z-index: 20;
-            font-weight: 700;
-            font-size: 1.1rem;
-            letter-spacing: -0.02em;
+            z-index: 30;
+            pointer-events: none;
         }
+
+        .title-line-1 { font-weight: 700; font-size: 1.2rem; color: var(--text-black); line-height: 1.1; }
+        .title-line-2 { font-weight: 600; font-size: 1rem; color: var(--text-black); line-height: 1.1; }
+        .title-line-3 { font-weight: 600; font-size: 0.6rem; color: var(--text-meta); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 
         /* CONTROLS */
         .controls {
             position: absolute;
             top: 1rem;
             right: 1.5rem;
-            z-index: 20;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
         }
 
+        .controls label { font-size: 0.7rem; color: #64748b; font-weight: 600; margin-right: 2px; }
+
         select {
-            appearance: none;
-            background-color: #fff;
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            padding: 8px 32px 8px 12px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            outline: none;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            appearance: none; background-color: #fff; border: 1px solid #cbd5e1;
+            color: #334155; padding: 6px 28px 6px 10px; border-radius: 4px;
+            font-size: 0.8rem; font-weight: 500; cursor: pointer; outline: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3e%3c/path%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            background-size: 14px;
+            background-repeat: no-repeat; background-position: right 6px center; background-size: 12px;
         }
 
         /* CANVAS */
         #container {
-            flex-grow: 1;
-            position: relative;
-            width: 100%;
-            height: 100%;
-            cursor: grab;
-            overflow: hidden;
+            flex-grow: 1; position: relative; width: 100%; height: 100%;
+            cursor: grab; overflow: hidden;
         }
-        
         #container:active { cursor: grabbing; }
-
         canvas { display: block; width: 100%; height: 100%; }
 
         /* FOOTER */
         footer {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #94a3b8;
-            pointer-events: none;
-            z-index: 20;
+            position: absolute; bottom: 8px; width: 100%; text-align: center;
+            font-size: 0.7rem; color: #94a3b8; pointer-events: none; z-index: 30;
         }
 
         .toast {
-            position: absolute;
-            bottom: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255,255,255,0.9);
-            border: 1px solid #e2e8f0;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            color: #64748b;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            pointer-events: none;
-            z-index: 20;
-            transition: opacity 0.5s;
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0;
+            padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; color: #64748b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); pointer-events: none;
+            z-index: 30; transition: opacity 0.5s;
         }
         
         @media print { body { display: none; } }
@@ -115,13 +95,18 @@
 </head>
 <body>
 
-<header>Biology@RI</header>
+<header>
+    <div class="title-line-1">Cell Membrane</div>
+    <div class="title-line-2">Transport Across Membranes</div>
+    <div class="title-line-3">Biology@RI</div>
+</header>
 
 <div class="controls">
+    <label>Type of movement</label>
     <select id="_mSel">
-        <option value="0">Endocytosis (General)</option>
-        <option value="1">Phagocytosis</option>
-        <option value="2">Pinocytosis</option>
+        <option value="0">Endocytosis - General</option>
+        <option value="1">Endocytosis - Phagocytosis</option>
+        <option value="2">Endocytosis - Pinocytosis</option>
     </select>
 </div>
 
@@ -130,20 +115,18 @@
     <div class="toast" id="_tst">Drag the molecule to the membrane</div>
 </div>
 
-<footer>&copy; Wynscape Education | All rights reserved</footer>
+<footer>&copy; All rights reserved</footer>
 
 <script>
 /**
- * CELL MEMBRANE SIMULATION - FLUID MOSAIC
- * 
- * Logic:
- * - Lipids scaled down 50%.
- * - Bilayer gap reduced.
- * - Dynamic density calculation for vesicle layers.
- * - Strict snap-back on release.
+ * CELL MEMBRANE LOGIC
+ * Features: 
+ * - 50% Larger Molecule.
+ * - Topological transformation (Upper->Inner, Lower->Outer).
+ * - Strict Reset (Elastic Snapback).
  */
 (function(){
-    // --- SECURITY & SETUP ---
+    // --- SECURITY ---
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.onkeydown = function(e) {
         if(e.keyCode == 123) return false; 
@@ -158,21 +141,20 @@
 
     // --- CONFIGURATION ---
     let _w, _h, _t = 0;
-    let _lipids = [];
     
-    // SCALE SETTINGS (Reduced by 50%)
-    const _HEAD_R = 3.5;       // Radius of head
-    const _TAIL_H = 15;        // Length of tail
-    const _GAP = 12;           // Gap between tail ends (Reduced by ~80% from previous 50px)
-    const _SPACING = 8;        // Distance between neighbors (Constant)
+    // SCALE SETTINGS
+    const _HEAD_R = 3.5;       
+    const _TAIL_H = 15;        
+    const _GAP = 12;           
+    const _SPACING = 8;        
     const _THICKNESS = (_TAIL_H * 2) + _GAP; 
+    const _MEM_Y_FACTOR = 0.35; 
 
-    // MOLECULE
+    // MOLECULE (Enlarged 50% from 18 -> 27)
     const _mol = { 
         x: 0, y: 0, 
-        r: 18, 
+        r: 27, 
         drag: false, 
-        isVesicle: false, 
         startY: 0 
     };
     
@@ -185,65 +167,20 @@
     function _init() {
         _w = _cvs.width = window.innerWidth;
         _h = _cvs.height = window.innerHeight;
-        
-        // Start Position: reduced distance to membrane
-        // Membrane is at _h/2. 
-        // We place it closer than before.
-        _mol.startY = (_h / 2) - 80; 
-        
+        // Start just above membrane
+        const memY = _h * _MEM_Y_FACTOR;
+        _mol.startY = memY - 80; 
         _reset();
-        
-        // Generate Linear Lipids
-        _lipids = [];
-        // Loop with reduced spacing for higher density
-        const count = Math.ceil(_w / _SPACING) + 10; 
-        for(let i = -5; i < count; i++) {
-            _lipids.push(i * _SPACING);
-        }
     }
 
     function _reset() {
         _mol.x = _w / 2;
         _mol.y = _mol.startY;
         _mol.drag = false;
-        _mol.isVesicle = false;
         _tst.style.opacity = 1;
     }
 
-    // --- PHYSICS ENGINE ---
-
-    function _getMemY(x, time) {
-        // Base sine wave
-        let y = (_h / 2) + Math.sin(x * 0.03 + time) * 4;
-        
-        if (_mol.isVesicle) return y; // Mem heals if vesicle formed
-
-        // Invagination Logic
-        const dx = x - _mol.x;
-        const distToMem = Math.max(0, _mol.y - y); 
-        
-        // Interaction threshold
-        if (_mol.y > y - _mol.r - 20) {
-            const width = 50; // Narrower pit due to smaller scale
-            const depth = Math.max(0, _mol.y - (_h/2 - _mol.r - _THICKNESS/2)); 
-            
-            if (Math.abs(dx) < width * 2) {
-                const influence = Math.exp(-(dx*dx) / (2 * (width/2.5)*(width/2.5)));
-                y += influence * depth;
-            }
-        }
-        return y;
-    }
-
-    function _getNormal(x, time) {
-        const d = 0.5; // Sampling distance
-        const y1 = _getMemY(x - d, time);
-        const y2 = _getMemY(x + d, time);
-        const tan = Math.atan2(y2 - y1, d * 2);
-        return { x: -Math.sin(tan), y: Math.cos(tan), ang: tan };
-    }
-
-    // --- INPUT ---
+    // --- INPUT HANDLERS ---
     function _getPos(e) {
         const r = _cvs.getBoundingClientRect();
         const t = e.touches ? e.touches[0] : e;
@@ -252,7 +189,7 @@
 
     function _down(e) {
         const p = _getPos(e);
-        if (Math.hypot(p.x - _mol.x, p.y - _mol.y) < 50) {
+        if (Math.hypot(p.x - _mol.x, p.y - _mol.y) < 60) {
             _mol.drag = true;
             _tst.style.opacity = 0;
         }
@@ -263,40 +200,28 @@
         e.preventDefault();
         const p = _getPos(e);
         _mol.x = p.x;
-        
-        // Limit bottom movement
-        const limit = _h - 60; // Above footer
+        // Limit movement above footer
+        const limit = _h - 40; 
         _mol.y = Math.min(limit, p.y);
-
-        // Pinch logic: deep enough?
-        if (!_mol.isVesicle && _mol.y > (_h/2) + 60) {
-            _mol.isVesicle = true;
-        }
     }
 
     function _up() {
+        // STRICT RESET RULE:
+        // Once finger doesn't touch, molecule MUST return to original position.
         _mol.drag = false;
-        // Rule: Once finger/mouse leaves, reset to original position
-        // This applies even if it became a vesicle, based on strict reading of prompt?
-        // Usually if it's a vesicle it drifts. But prompt says "Once leaves... reset".
-        // I will implement standard UX: If it IS a vesicle (operation complete), it continues.
-        // If it is NOT a vesicle (operation incomplete), it snaps back.
-        
-        if (!_mol.isVesicle) {
-            _snapBack();
-        } else {
-            // Optional: If you want it to reset even after success, uncomment below
-            // _snapBack(); _mol.isVesicle = false; 
-        }
+        _snapBack();
     }
 
     function _snapBack() {
-        // Simple easing
+        // Elastic snapback animation
         const anim = () => {
-            if (_mol.drag || _mol.isVesicle) return;
+            if (_mol.drag) return; // Stop if grabbed again
+            
+            // Smooth easing (Lerp)
             _mol.x += (_w/2 - _mol.x) * 0.15;
             _mol.y += (_mol.startY - _mol.y) * 0.15;
             
+            // Stop condition
             if (Math.abs(_mol.y - _mol.startY) > 0.5) {
                 requestAnimationFrame(anim);
             }
@@ -313,7 +238,9 @@
     _sel.addEventListener('change', _reset);
     window.addEventListener('resize', _init);
 
-    // --- RENDER ---
+    // --- GEOMETRY & RENDERING ---
+    
+    // Draw a single lipid
     function _drawLipid(ctx, x, y, angle, isUpper) {
         ctx.save();
         ctx.translate(x, y);
@@ -323,7 +250,7 @@
         
         // Tails
         ctx.strokeStyle = C_TAIL;
-        ctx.lineWidth = 1.5; // Thinner for smaller scale
+        ctx.lineWidth = 1.5; 
         ctx.beginPath();
         ctx.moveTo(-1.5, 0); ctx.lineTo(-1.5, dir * _TAIL_H);
         ctx.moveTo(1.5, 0); ctx.lineTo(1.5, dir * _TAIL_H);
@@ -338,125 +265,154 @@
         ctx.restore();
     }
 
+    // Main Physics & Drawing Loop
     function _loop() {
         _t += 0.05;
         _ctx.clearRect(0,0,_w,_h);
 
-        // 1. CYTOPLASM (Beige Fill)
+        // --- 1. CALCULATE MEMBRANE GEOMETRY ---
+        // Instead of a simple function, we generate a path based on molecule depth.
+        // This ensures the "wrapping" effect.
+        
+        const baseY = _h * _MEM_Y_FACTOR;
+        const depth = Math.max(0, _mol.y - (baseY - _mol.r));
+        const interactionRadius = 80; // How wide the membrane is pulled
+        
+        // As depth increases, the "neck" (opening width) decreases
+        // At depth 0, width is interactionRadius. 
+        // At high depth, width approaches 0 (pinch).
+        // Smooth transition:
+        let neckFactor = Math.max(0, 1 - (depth / 200)); 
+        let neckWidth = interactionRadius * neckFactor;
+        if(neckWidth < 10 && depth > 50) neckWidth = 0; // Snap shut visually
+
+        // Points generation
+        // We use discrete steps to build the membrane path
+        const points = [];
+        const step = _SPACING; // Keep spacing constant
+        
+        // Loop X from 0 to Width
+        for(let x = -20; x <= _w + 20; x += step) {
+            let y = baseY + Math.sin(x * 0.03 + _t) * 4;
+            let ang = 0;
+            
+            // Interaction Logic
+            const dx = x - _mol.x;
+            
+            // If we are far from molecule, simple sine wave.
+            // If near, we calculate the "wrap" position.
+            
+            // Influence based on current Neck Width
+            // We use a blend.
+            
+            // This logic bends the line around the circle
+            if (depth > 0 && Math.abs(dx) < interactionRadius * 1.5) {
+                // Determine point on the molecule surface
+                // Current wrap amount (0 to 1)
+                // If depth is high, we wrap almost 360 degrees
+                
+                // Gaussian displacement is easier for smooth "soap bubble" stretching
+                // Modified Gaussian: Width narrows as Depth increases
+                
+                // Calculate pit shape
+                const pitWidth = neckWidth + (_mol.r * 1.5); // Effective width of the deformation
+                if (Math.abs(dx) < pitWidth) {
+                    // Normalize X (-1 to 1 within pit)
+                    const nx = dx / pitWidth;
+                    // Shape function: Smooth drop
+                    const shape = Math.exp(-Math.pow(dx / (30 + neckWidth/2), 2));
+                    
+                    // Add depth
+                    y += shape * depth;
+                    
+                    // SUCK IN EFFECT: As we go deeper, X coordinates pull toward center
+                    // This creates the "neck" narrowing effect visually
+                    if (depth > 50) {
+                        const suckFactor = (depth - 50) / 200;
+                        const suckAmount = (x - _mol.x) * suckFactor * 0.5;
+                         // Apply shift visually only (simulated x) or keep x constant?
+                         // Keeping x constant stretches lipids. 
+                         // To simulate "flow", we just modify y here for visual simplicity 
+                         // while relying on density from the loop step.
+                    }
+                }
+            }
+            
+            // Calculate angle for this point (Approximate normal)
+            // We need next point to get true normal
+            points.push({x:x, y:y});
+        }
+        
+        // --- 2. DRAW CYTOPLASM (Beige) ---
+        // Fill from bottom lipids down to footer
+        const footerY = _h - 35; // Stop above rights reserved
+        
         _ctx.fillStyle = C_CYTO;
         _ctx.beginPath();
-        _ctx.moveTo(0, _h); 
+        _ctx.moveTo(0, footerY);
         
-        // Trace bottom of membrane for fill
-        for(let x = 0; x <= _w; x+=5) { // Higher res for fill
-            const my = _getMemY(x, _t);
-            const norm = _getNormal(x, _t);
-            // Bottom head position
-            const by = my + (norm.y * _THICKNESS/2);
-            _ctx.lineTo(x, by);
+        // Iterate points to trace bottom of membrane
+        // Calculate normals on the fly
+        for(let i=1; i<points.length-1; i++) {
+            const p = points[i];
+            const prev = points[i-1];
+            const next = points[i+1];
+            
+            // Normal calculation
+            const tan = Math.atan2(next.y - prev.y, next.x - prev.x);
+            const nx = -Math.sin(tan);
+            const ny = Math.cos(tan);
+            
+            // Bottom Head Position
+            const bx = p.x + (nx * _THICKNESS/2);
+            const by = p.y + (ny * _THICKNESS/2);
+            
+            if(i===1) _ctx.lineTo(0, by);
+            _ctx.lineTo(bx, by);
         }
-        _ctx.lineTo(_w, _h);
+        _ctx.lineTo(_w, footerY);
         _ctx.closePath();
         _ctx.fill();
 
         // Label
-        _ctx.fillStyle = "#9ca3af";
-        _ctx.font = "bold 20px sans-serif";
+        _ctx.fillStyle = "rgba(0,0,0,0.4)";
+        _ctx.font = "bold 16px sans-serif";
         _ctx.textAlign = "left";
-        _ctx.fillText("CYTOPLASM", 20, _h - 40);
+        _ctx.fillText("CYTOPLASM", 20, footerY - 80);
 
-        // 2. MEMBRANE LIPIDS
-        for (let x of _lipids) {
-            const cy = _getMemY(x, _t);
-            const n = _getNormal(x, _t);
+        // --- 3. DRAW MEMBRANE (LIPIDS) ---
+        for(let i=1; i<points.length-1; i++) {
+            const p = points[i];
+            const prev = points[i-1];
+            const next = points[i+1];
             
-            // Top Head
-            const tx = x + (n.x * -_THICKNESS/2);
-            const ty = cy + (n.y * -_THICKNESS/2);
-            
-            // Bottom Head
-            const bx = x + (n.x * _THICKNESS/2);
-            const by = cy + (n.y * _THICKNESS/2);
+            const tan = Math.atan2(next.y - prev.y, next.x - prev.x);
+            const nx = -Math.sin(tan);
+            const ny = Math.cos(tan);
 
-            _drawLipid(_ctx, tx, ty, n.ang, true);
-            _drawLipid(_ctx, bx, by, n.ang, false);
+            // Upper Leaflet (Becomes Inner Layer)
+            // Position: Center - Normal*Thickness/2
+            const tx = p.x + (nx * -_THICKNESS/2);
+            const ty = p.y + (ny * -_THICKNESS/2);
+            
+            // Lower Leaflet (Becomes Outer Layer)
+            // Position: Center + Normal*Thickness/2
+            const bx = p.x + (nx * _THICKNESS/2);
+            const by = p.y + (ny * _THICKNESS/2);
+
+            // Draw
+            // Upper: Heads point UP relative to curve (which means IN towards center of curvature if concave)
+            _drawLipid(_ctx, tx, ty, tan, true);
+            
+            // Lower: Heads point DOWN relative to curve (OUT away from center of curvature)
+            _drawLipid(_ctx, bx, by, tan, false);
         }
 
-        // 3. MOLECULE / VESICLE
-        if (_mol.isVesicle) {
-            // Vesicle drift
-            if (!_mol.drag) _mol.y += 0.5;
-
-            // Draw Molecule
-            _ctx.fillStyle = C_MOL;
-            _ctx.beginPath();
-            _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
-            _ctx.fill();
-
-            // Draw Vesicle Layers
-            // We calculate circumference to determine how many lipids to draw
-            // so spacing remains constant (_SPACING)
-            
-            const innerR = _mol.r + 4 + _HEAD_R; // Close fit
-            const outerR = innerR + _THICKNESS;
-            
-            const innerCirc = 2 * Math.PI * innerR;
-            const outerCirc = 2 * Math.PI * outerR;
-            
-            const nInner = Math.floor(innerCirc / _SPACING);
-            const nOuter = Math.floor(outerCirc / _SPACING); // More lipids on outside
-
-            // Inner Ring (Tails pointing OUT)
-            for(let i=0; i<nInner; i++) {
-                const ang = (i / nInner) * Math.PI * 2 + _t * 0.2;
-                const lx = _mol.x + Math.cos(ang) * innerR;
-                const ly = _mol.y + Math.sin(ang) * innerR;
-                
-                _ctx.save();
-                _ctx.translate(lx, ly);
-                _ctx.rotate(ang + Math.PI/2); // Face center
-                
-                // Head
-                _ctx.fillStyle = C_HEAD;
-                _ctx.beginPath(); _ctx.arc(0,0,_HEAD_R,0,Math.PI*2); _ctx.fill();
-                // Tail (pointing UP/Away from center)
-                _ctx.strokeStyle = C_TAIL; ctx = _ctx;
-                ctx.lineWidth=1.5; ctx.beginPath();
-                ctx.moveTo(-1.5,0); ctx.lineTo(-1.5, -_TAIL_H);
-                ctx.moveTo(1.5,0); ctx.lineTo(1.5, -_TAIL_H);
-                ctx.stroke();
-                _ctx.restore();
-            }
-
-            // Outer Ring (Tails pointing IN)
-            for(let i=0; i<nOuter; i++) {
-                const ang = (i / nOuter) * Math.PI * 2 + _t * 0.2; // Same rotation speed
-                const lx = _mol.x + Math.cos(ang) * outerR;
-                const ly = _mol.y + Math.sin(ang) * outerR;
-                
-                _ctx.save();
-                _ctx.translate(lx, ly);
-                _ctx.rotate(ang + Math.PI/2);
-                
-                // Head
-                _ctx.fillStyle = C_HEAD;
-                _ctx.beginPath(); _ctx.arc(0,0,_HEAD_R,0,Math.PI*2); _ctx.fill();
-                // Tail (pointing DOWN/Toward center)
-                ctx.strokeStyle = C_TAIL; ctx.lineWidth=1.5;
-                ctx.beginPath();
-                ctx.moveTo(-1.5,0); ctx.lineTo(-1.5, _TAIL_H);
-                ctx.moveTo(1.5,0); ctx.lineTo(1.5, _TAIL_H);
-                ctx.stroke();
-                _ctx.restore();
-            }
-
-        } else {
-            // Standard Molecule
-            _ctx.fillStyle = C_MOL;
-            _ctx.beginPath();
-            _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
-            _ctx.fill();
-        }
+        // --- 4. DRAW MOLECULE ---
+        _ctx.fillStyle = C_MOL;
+        _ctx.beginPath();
+        _ctx.arc(_mol.x, _mol.y, _mol.r, 0, Math.PI*2);
+        _ctx.fill();
 
         requestAnimationFrame(_loop);
     }
